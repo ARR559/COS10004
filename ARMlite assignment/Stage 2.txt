@@ -1,0 +1,98 @@
+sec_1:
+      PUSH {R0, R8}
+      MOV R7, #Prompt
+      STR R7, .WriteString
+      BL Print
+      LDR R0, .LastKeyAndReset // looks for the last input
+      CMP R0, #82       //resets the stopwatch
+      BEQ Reset
+      CMP R0, #80       //pause if 'p' key way pressed
+      BEQ pause
+      LDR R8, 0x001a0   //loads memory 0x001a0 into R8
+      ADD R8, R8, #1    //Adding value 1 into R8
+      STR R8, 0x001a0   //Store R8 into memory 0x001a0
+      POP {R0, R8}
+      LDR R8, 0x001a0
+      CMP R8, #10       //compares R8 to value 10, if its true then it shifts to sec_tens branch
+      BEQ Sec_10
+      PUSH {R8, R4, R5, R6}
+      LDR R8, .Time     //      current time
+delay:
+      MOV R5, R8        //moving R8 value into R5
+      LDR R4, .Time     //Loading current time  in R4
+      SUB R6, R4, R5    //difference of previous and current time in R6
+      CMP R6, #1 
+      BLT delay
+      POP {R8, R4, R5, R6}
+      B sec_1
+Sec_10:                 //doing the tens place counting
+      MOV R8, #0
+      STR R8, 0x001a0
+      LDR R8, 0x001a4
+      ADD R8, R8, #1
+      STR R8, 0x001a4 
+      CMP R8, #6        //if it equals 6, the program is halted
+      BEQ mins_1        //when the second tens place reaches 6, it will stop the program
+      PUSH {R8, R4, R5, R6}
+      LDR R8, .Time     //current time
+      B delay
+Reset:                  //Resets the value of seconds to 00
+      MOV R0,#Newline
+      STR R0, .WriteString
+      MOV R0, #0
+      STR R0, 0X001a0
+      MOV R0, #0
+      STR R0, 0X001a4
+      PUSH {LR}
+      BL Print
+      POP {LR}
+      B pause
+Print:                  //Printing the seconds 
+      PUSH {R0}
+      LDR R0, 0x001aC
+      STR R0, .WriteUnsignedNum
+      LDR R0, 0x001a8
+      STR R0, .WriteUnsignedNum
+      MOV R0, #colon
+      STR R0, .WriteString
+      LDR R0, 0x001a4
+      STR R0, .WriteUnsignedNum
+      LDR R0, 0x001a0
+      STR R0, .WriteUnsignedNum
+      POP {R0}
+      RET
+mins_1:                 //displays the first 9 minutes
+      MOV R8, #0
+      STR R8, 0x001a4
+      LDR R8, 0x001a8
+      ADD R8, R8, #1
+      STR R8, 0x001a8
+      CMP R8, #10       //if the minutes matches value 10, it will add value 1 into next place mins
+      BEQ mins_10
+      PUSH {R8, R4, R5, R6}
+      LDR R8, .Time     // current time
+      B delay           //delays 1 sec
+mins_10:                //displays minutes upto 99
+      MOV R8, #0
+      STR R8, 0x001a8
+      LDR R8, 0x001ac
+      ADD R8, R8, #1
+      STR R8, 0x001ac
+      CMP R8, #80       //and then stops
+      BEQ stop
+      PUSH {R8, R4, R5, R6}
+      LDR R8, .Time     //current time
+      B delay
+pause:                  //pause and play the stopwatch
+      LDR R0, .LastKeyAndReset
+      CMP R0, #82       //Reset when in the pause state
+      BEQ Reset
+      CMP R0, #80       //Resume the stopwatch
+      BEQ sec_1
+      B pause
+stop:                   //stops program when no condition matches
+      HALT
+space: .asciz "\n"
+Newline: .asciz "\n\n\n\n"
+colon: .asciz ":"
+Prompt: .ASCIZ " \n\n Press P to pause/resume \n Press R to reset stopwatch \n "
